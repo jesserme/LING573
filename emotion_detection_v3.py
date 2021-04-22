@@ -5,7 +5,6 @@ from sklearn.naive_bayes import BernoulliNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 
-from collections import defaultdict
 import nltk.tokenize
 
 import pickle
@@ -78,18 +77,15 @@ def get_other_feats(train_dataset):
         tweet_len = len(train_dataset[tweet_id][1])
 
         if ( tweet_len < 120 ):
-            len_code = 0
+            len_code = 1
 
         elif ( tweet_len > 180 ):
             len_code = 2
 
         #has exclamation mark
         num_exclamations = 0
-
         for char in train_dataset[tweet_id][1]:
-
             if (char == "!"):
-
                 num_exclamations += 1
                 #break
 
@@ -149,122 +145,16 @@ def get_naive_baiyes_1(train_dataset):
 
     return model
 
-def train_knn_1(train_dataset):
-    '''
-    Given a training dataset 'train_dataset` which is a map of 
-    'tweet_id' => tuple([event, tweet, offensive, emotion]) values,
-    train a kNN Model on the 'event', 'offensive', length and
-    exclamation mark features.
-    Return a tuple with 3 values:
-    1.) the trained model
-    2.) a lookup table for event_string => numeric_code
-    3.) a lookup table for offensive_string => numeric_code
-    '''
 
-    X_feats, y_pred, event_to_code, offensive_to_code = get_other_feats(train_dataset)
-
-    model = KNeighborsClassifier(n_neighbors=15)
-    model.fit(X_feats, y_pred)
-
-    return tuple([model,event_to_code, offensive_to_code])
-
-def get_knn_1(train_dataset):
-    '''
-    Given a training dataset 'train_dataset` which is a map of 
-    'tweet_id' => tuple([event, tweet, offensive, emotion]) values,
-    check if a kNN model has already been trained on the
-    'event' and 'offensive' features.
-    If yes, return the trained model
-    If not, train and save the model as a pickle in 'knn_1.pickle'.
-   
-    Return a tuple with 3 values:
-    1.) the trained model
-    2.) a lookup table for event_string => numeric_code
-    3.) a lookup table for offensive_string => numeric_code
-    '''
-
-    model = None
-
-    if ( os.path.exists("knn_1.pickle") ):
-
-        with open("knn_1.pickle", "rb") as pickle_f:
-
-            model = pickle.load(pickle_f)
-
-    else:
-
-        model = train_knn_1(train_dataset)
-
-        with open("knn_1.pickle", "wb") as pickle_f:
-            pickle.dump(model, pickle_f)
-
-    return model
-
-
-def train_svm_1(train_dataset):
-    '''
-    Given a training dataset 'train_dataset` which is a map of 
-    'tweet_id' => tuple([event, tweet, offensive, emotion]) values,
-    train an SVM Model on the 'event', 'offensive', length and
-    exclamation mark features.
-    Return a tuple with 3 values:
-    1.) the trained model
-    2.) a lookup table for event_string => numeric_code
-    3.) a lookup table for offensive_string => numeric_code
-    '''
-
-    X_feats, y_pred, event_to_code, offensive_to_code = get_other_feats(train_dataset)
-
-
-    model = SVC(kernel='rbf', gamma=0.5, probability=True )
-    model.fit(X_feats, y_pred)
-
-    return tuple([model,event_to_code, offensive_to_code])
-
-def get_svm_1(train_dataset):
-    '''
-    Given a training dataset 'train_dataset` which is a map of 
-    'tweet_id' => tuple([event, tweet, offensive, emotion]) values,
-    check if an SVM model has already been trained on the
-    'event' and 'offensive' features.
-    If yes, return the trained model
-    If not, train and save the model as a pickle in 'svm_1.pickle'.
-   
-    Return a tuple with 3 values:
-    1.) the trained model
-    2.) a lookup table for event_string => numeric_code
-    3.) a lookup table for offensive_string => numeric_code
-    '''
-
-    model = None
-
-    if ( os.path.exists("svm_1.pickle") ):
-
-        with open("svm_1.pickle", "rb") as pickle_f:
-
-            model = pickle.load(pickle_f)
-
-    else:
-
-        model = train_svm_1(train_dataset)
-
-        with open("svm_1.pickle", "wb") as pickle_f:
-            pickle.dump(model, pickle_f)
-
-    return model
-
-
-def test_other_feats_model(test_dataset, model):
+def test_naive_bayes_1(test_dataset, naive_bayes_model):
     '''
     Given a testing dataset 'test_dataset` which is a map of 
     'tweet_id' => tuple([event, tweet, offensive, emotion]) values,
-    and a model+params 'model` which is trained on the
-    'event', 'offensive', tweet length and exclamation mark
-    features.
-    Return the accuracy of the model.
+    and a model+params 'naive_bayes_model` which is trained on the
+    'event' and 'offensive' features, return the accuracy of the model.
     '''
 
-    model, event_to_code, offensive_to_code = model
+    model, event_to_code, offensive_to_code = naive_bayes_model
 
     X_feats = []
     y_pred = []
@@ -341,8 +231,8 @@ def get_tweet_feats(train_dataset):
             word_freqs[word] += 1
 
     #remove rare words/phrases (< 5% occurence)
-    #min_threshold = len(train_dataset) * 0.005
-    min_threshold = 0
+    min_threshold = len(train_dataset) * 0.02
+
     for word in word_freqs:
 
         if ( word_freqs[word] <= min_threshold ):
@@ -462,45 +352,6 @@ def test_BoW_model(test_dataset, model):
 
     return model.score(X_feats, y_pred)   
 
-def get_other_feats_2(tweet, event_to_code, offensive_to_code):
-    '''
-    Given a tweet, return 4 features: event, offensive, length, exclamation
-    mark use as a list.
-    '''
-    event = tweet[0].lower()
-    offensive = tweet[2].lower()
-    emotion = tweet[3].lower()
-
-    event_code = -1
-
-    if ( event in event_to_code ):
-        event_code = event_to_code[event]
-
-    offensive_code = -1
-
-    if ( offensive in offensive_to_code ):
-        offensive_code = offensive_to_code[offensive]
-
-    #len codes: < 120: 0; 120-180: 1; > 180: 2
-    len_code = 1
-    tweet_len = len(tweet[1])
-
-    if ( tweet_len < 120 ):
-        len_code = 1
-
-    elif ( tweet_len > 180 ):
-        len_code = 2
-
-    #has exclamation mark
-    num_exclamations = 0
-    for char in tweet[1]:
-
-        if (char == "!"):
-            num_exclamations += 1
-            #break
-
-    return [event_code, offensive_code, len_code, num_exclamations]
-
 
 def test_ensemble(test_dataset, models, model_weights):
     '''
@@ -512,10 +363,7 @@ def test_ensemble(test_dataset, models, model_weights):
     The models/weights are expected in this order:
     1.) Naive Bayes event+offensive features model
     2.) Naive bayes tweet model
-    3.) kNN model 1
-    4.) kNN model 2
-    5.) SVM model 1
-    6.) SVM model 2
+    3.) kNN model
     Return the accuracy of the ensemble.
     '''
 
@@ -525,35 +373,17 @@ def test_ensemble(test_dataset, models, model_weights):
     #provide at least 2 mode
     assert len(models) >= 2, "Expected at least 2 models to be provided"
 
-
     model_1 = models[0]
-    event_offensive_model, event_to_code, offensive_to_code = None, None, None
-
-    if (model_1 is not None):
-        event_offensive_model, event_to_code, offensive_to_code = model_1
+    event_offensive_model, event_to_code, offensive_to_code = model_1
 
     model_2 = models[1]
-    tweet_model, unique_words = None, None
-
-    if ( model_2 is not None ):
-        tweet_model, unique_words = model_2
+    tweet_model, unique_words = model_2
 
     model_3 = None
-    model_4 = None
-    model_5 = None
-    model_6 = None
+    model_3_unique_words = None
 
-    if ( len(models) > 2 and models[2] is not None ):
-        model_3, unique_words  = models[2]
-
-    if ( len(models) > 3  and models[3] is not None):
-        model_4, event_to_code, offensive_to_code = models[3]
-
-    if ( len(models) > 4  and models[4] is not None):
-        model_5, unique_words  = models[4]
-
-    if ( len(models) > 5  and models[5] is not None):
-        model_6, event_to_code, offensive_to_code = models[5]
+    if ( len(models) > 2 ):
+        model_3, model_3_unique_words  = models[2]
 
     #X_feats = []
     #y_pred = []
@@ -562,23 +392,50 @@ def test_ensemble(test_dataset, models, model_weights):
 
     for tweet_id in test_dataset:
 
+        event = test_dataset[tweet_id][0].lower()
+        offensive = test_dataset[tweet_id][2].lower()
         emotion = test_dataset[tweet_id][3].lower()
 
+        event_code = -1
 
-        probabilities = defaultdict(lambda: 0)
-        feats_a = get_other_feats_2(test_dataset[tweet_id], event_to_code, offensive_to_code)
+        if ( event in event_to_code ):
+            event_code = event_to_code[event]
+
+        offensive_code = -1
+
+        if ( offensive in offensive_to_code ):
+            offensive_code = offensive_to_code[offensive]
+
+        #len codes: < 120: 0; 120-180: 1; > 180: 2
+        len_code = 1
+        tweet_len = len(test_dataset[tweet_id][1])
+
+        if ( tweet_len < 120 ):
+            len_code = 1
+
+        elif ( tweet_len > 180 ):
+            len_code = 2
+
+        #has exclamation mark
+        num_exclamations = 0
+        for char in test_dataset[tweet_id][1]:
+
+            if (char == "!"):
+                num_exclamations += 1
+                #break
 
         #predict with the event and offensive features model
-        if ( event_offensive_model is not None ):
+        probabilities = {}
+        pred = event_offensive_model.predict_proba(numpy.array([event_code, offensive_code, len_code, num_exclamations]).reshape(1, -1))[0].tolist()
 
-            pred = event_offensive_model.predict_proba(numpy.array(feats_a).reshape(1, -1))[0].tolist()
+
+        classes_list = event_offensive_model.classes_.tolist()
 
 
-            classes_list = event_offensive_model.classes_.tolist()
 
-            for emotion_i in range(0, len(classes_list)):
-                #each model has an equal weight
-                probabilities[classes_list[emotion_i]] = pred[emotion_i] * model_weights[0]
+        for emotion_i in range(0, len(classes_list)):
+            #each model has an equal weight
+            probabilities[classes_list[emotion_i]] = pred[emotion_i] * model_weights[0]
 
         tweet = test_dataset[tweet_id][1].lower()
 
@@ -604,18 +461,16 @@ def test_ensemble(test_dataset, models, model_weights):
             feats.append(value)
 
         #predict with the tweet feature model
-        if ( tweet_model is not None ):
+        pred = list(tweet_model.predict_proba(numpy.array(feats).reshape(1, -1))[0])
 
-            pred = list(tweet_model.predict_proba(numpy.array(feats).reshape(1, -1))[0])
+        classes_list = list(tweet_model.classes_)
 
-            classes_list = list(tweet_model.classes_)
-
-            for emotion_i in range(0, len(classes_list)):
-                #each model has an equal weight
-                probabilities[classes_list[emotion_i]] += pred[emotion_i] * model_weights[1]
+        for emotion_i in range(0, len(classes_list)):
+            #each model has an equal weight
+            probabilities[classes_list[emotion_i]] += pred[emotion_i] * model_weights[1]
 
 
-        #predict with the kNN model 1
+        #predict with the kNN model
         if ( model_3 is not None ):
 
             pred = list(model_3.predict_proba(numpy.array(feats).reshape(1, -1))[0])
@@ -626,42 +481,6 @@ def test_ensemble(test_dataset, models, model_weights):
 
                 probabilities[classes_list[emotion_i]] += pred[emotion_i] * model_weights[2]
 
-        #predict with kNN model 2
-
-        if ( model_4 is not None ):
-
-            pred = model_4.predict_proba(numpy.array(feats_a).reshape(1, -1))[0].tolist()
-
-
-            classes_list = model_4.classes_.tolist()
-
-            for emotion_i in range(0, len(classes_list)):
-                #each model has an equal weight
-                probabilities[classes_list[emotion_i]] += pred[emotion_i] * model_weights[3]
-
-        #predict with SVM model 1
-        if ( model_5 is not None ):
-
-            #print("SVM ensemle check")
-            pred = list(model_5.predict_proba(numpy.array(feats).reshape(1, -1))[0])
-
-            classes_list = list(model_5.classes_)
-
-            for emotion_i in range(0, len(classes_list)):
-
-                probabilities[classes_list[emotion_i]] += pred[emotion_i] * model_weights[4]
-
-        if (model_6 is not None ):
-
-            pred = model_6.predict_proba(numpy.array(feats_a).reshape(1, -1))[0].tolist()
-
-            classes_list = model_6.classes_.tolist()
-
-            for emotion_i in range(0, len(classes_list)):
-                #each model has an equal weight
-                probabilities[classes_list[emotion_i]] += pred[emotion_i] * model_weights[3]
-
-        #predict with 
 
         best_fit = max(probabilities, key=lambda x: probabilities[x])
 
@@ -715,6 +534,8 @@ def get_knn(train_dataset):
 
     return model
 
+def test_other_model():
+
 def train_svm(train_dataset):
     '''
     Given a testing dataset 'test_dataset` which is a map of 
@@ -726,7 +547,7 @@ def train_svm(train_dataset):
     '''
     X_feats, y_pred, unique_words = get_tweet_feats(train_dataset)
 
-    model = SVC(kernel='rbf', probability=True)
+    model = SVC(kernel='linear')
     model.fit(X_feats, y_pred)
 
     return tuple([model, unique_words])
@@ -763,49 +584,25 @@ dev_set = load_data("dev.tsv")
 train_set = load_data("train.tsv")
 
 #event and offensive feature
-#model_and_params_1 = get_naive_baiyes_1(train_set)
-#print("Event & offensive features nodel accuracy:", test_other_feats_model(dev_set, model_and_params_1))
+model_and_params_1 = get_naive_baiyes_1(train_set)
+print("Event & offensive features nodel accuracy:", test_naive_bayes_1(dev_set, model_and_params_1))
 
 
 #tweet features
-#model_and_params_2 = get_naive_baiyes_2(train_set)
-#print("Tweet feature model acccuracy:", test_BoW_model(dev_set, model_and_params_2))
+model_and_params_2 = get_naive_baiyes_2(train_set)
+print("Tweet feature model acccuracy:", test_BoW_model(dev_set, model_and_params_2))
 
 #event/offensive & tweet ensemble
-#print("Event/offensive & tweet ensemble accuracy:", test_ensemble(dev_set, [model_and_params_1, model_and_params_2], [0.5, 0.5]))
+print("Event/offensive & tweet ensemble accuracy:", test_ensemble(dev_set, [model_and_params_1, model_and_params_2], [0.5, 0.5]))
 
 #knn model
-#knn_model_and_params = get_knn(train_set)
+knn_model_and_params = get_knn(train_set)
 #print("Num words: ", len(knn_model_and_params[1]))
-#print("KNN model:",  test_BoW_model(dev_set, knn_model_and_params))
+print("KNN model:",  test_BoW_model(dev_set, knn_model_and_params))
 
-#other feats
-#knn_model_and_params_2 = get_knn_1(train_set)
-#print("KNN model 2:", test_other_feats_model(dev_set, knn_model_and_params_2))
+print("Naive Bayes + kNN ensemble accuracy:", test_ensemble(dev_set, [model_and_params_1, model_and_params_2, knn_model_and_params], [0.3, 0.3, 0.4]))
 
-#print("Naive Bayes + kNN 1 ensemble accuracy:", test_ensemble(dev_set, [model_and_params_1, model_and_params_2, knn_model_and_params], [0.3, 0.3, 0.4]))
-
-#print("Naive Bayes + kNN 1 + kNN2 ensemble accuracy:", test_ensemble(dev_set, [model_and_params_1, model_and_params_2, knn_model_and_params, knn_model_and_params_2], [0.3, 0.3, 0.4, 0.4]))
 #SVM model
 svm_model_and_params = get_svm(train_set)
 print("SVM model:", test_BoW_model(dev_set, svm_model_and_params))
-
-#print("Naive Bayes + kNN 1 + kNN2 + SVM 1 ensemble accuracy:", test_ensemble(dev_set, [model_and_params_1, model_and_params_2, knn_model_and_params, knn_model_and_params_2, svm_model_and_params], [0.3, 0.3, 0.4, 0.4, 0.5]))
-
-#svm model 2
-svm_model_and_params_2 = get_svm_1(train_set)
-print("SVM model 2:", test_other_feats_model(dev_set, svm_model_and_params_2))
-
-#print("Naive Bayes + kNN 1 + kNN2 + SVM 1 + SVM 2 ensemble accuracy:", test_ensemble(dev_set, [model_and_params_1, model_and_params_2, knn_model_and_params, knn_model_and_params_2, svm_model_and_params, svm_model_and_params_2 ], [1, 1, 1, 1, 1, 1]))
-
-#print("kNN 1 + kNN2 + SVM 1 + SVM 2 ensemble accuracy:", test_ensemble(dev_set, [None, None, knn_model_and_params, knn_model_and_params_2, svm_model_and_params, svm_model_and_params_2 ], [0.3, 0.3, 0.4, 0.4, 0.5, 0.5]))
-
-print("SVM 1 + SVM 2 ensemble accuracy:", test_ensemble(dev_set, [None, None, None, None, svm_model_and_params, svm_model_and_params_2 ], [0.3, 0.3, 0.4, 0.4, 0.5, 0.5]))
-
-
-#print("Naive Bayes + SVM 1 + SVM 2 ensemble accuracy:", test_ensemble(dev_set, [model_and_params_1, model_and_params_2, None, None, svm_model_and_params, svm_model_and_params_2 ], [0.3, 0.3, 0.4, 0.4, 0.5, 0.5]))
-
-#print("Naive Bayes 1 + SVM 2 ensemble accuracy:", test_ensemble(dev_set, [model_and_params_1, None, None, None,svm_model_and_params, svm_model_and_params_2 ], [0.3, 0.3, 0.4, 0.4, 0.5, 0.5]))
-
-
 
