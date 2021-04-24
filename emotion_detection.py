@@ -45,7 +45,7 @@ def load_data(input_filename):
 
 def get_other_feats(train_dataset):
     '''
-    Get event, offensive, tweet length and exclamation mark use
+    Get event, offensive, tweet length
     features.
     '''
     X_feats = []
@@ -83,130 +83,17 @@ def get_other_feats(train_dataset):
         elif ( tweet_len > 180 ):
             len_code = 2
 
-        #has exclamation mark
-        num_exclamations = 0
-
-        for char in train_dataset[tweet_id][1]:
-
-            if (char == "!"):
-
-                num_exclamations += 1
-                #break
-
-        X_feats.append([event_code, offensive_code, len_code, num_exclamations])
+        X_feats.append([event_code, offensive_code, len_code])
         y_pred.append(train_dataset[tweet_id][3].lower())
 
     return tuple([X_feats, y_pred, event_to_code, offensive_to_code])
-
-def train_naive_bayes_1(train_dataset):
-    '''
-    Given a training dataset 'train_dataset` which is a map of 
-    'tweet_id' => tuple([event, tweet, offensive, emotion]) values,
-    train a naive bayes model on the 'event', 'offensive', length and
-    exclamation mark features.
-    Return a tuple with 3 values:
-    1.) the trained model
-    2.) a lookup table for event_string => numeric_code
-    3.) a lookup table for offensive_string => numeric_code
-    '''
-
-    X_feats, y_pred, event_to_code, offensive_to_code = get_other_feats(train_dataset)
-
-    model = MultinomialNB()
-    model.fit(X_feats, y_pred)
-
-    return tuple([model,event_to_code, offensive_to_code])
-
-def get_naive_baiyes_1(train_dataset):
-    '''
-    Given a training dataset 'train_dataset` which is a map of 
-    'tweet_id' => tuple([event, tweet, offensive, emotion]) values,
-    check if a Naive Bayes model has already been trained on the
-    'event' and 'offensive' features.
-    If yes, return the trained model
-    If not, train and save the model as a pickle in 'naive_bayes_1.pickle'.
-   
-    Return a tuple with 3 values:
-    1.) the trained model
-    2.) a lookup table for event_string => numeric_code
-    3.) a lookup table for offensive_string => numeric_code
-    '''
-
-    model = None
-
-    if ( os.path.exists("naive_bayes_1.pickle") ):
-
-        with open("naive_bayes_1.pickle", "rb") as pickle_f:
-
-            model = pickle.load(pickle_f)
-
-    else:
-
-        model = train_naive_bayes_1(train_dataset)
-
-        with open("naive_bayes_1.pickle", "wb") as pickle_f:
-            pickle.dump(model, pickle_f)
-
-    return model
-
-def train_knn_1(train_dataset):
-    '''
-    Given a training dataset 'train_dataset` which is a map of 
-    'tweet_id' => tuple([event, tweet, offensive, emotion]) values,
-    train a kNN Model on the 'event', 'offensive', length and
-    exclamation mark features.
-    Return a tuple with 3 values:
-    1.) the trained model
-    2.) a lookup table for event_string => numeric_code
-    3.) a lookup table for offensive_string => numeric_code
-    '''
-
-    X_feats, y_pred, event_to_code, offensive_to_code = get_other_feats(train_dataset)
-
-    model = KNeighborsClassifier(n_neighbors=15)
-    model.fit(X_feats, y_pred)
-
-    return tuple([model,event_to_code, offensive_to_code])
-
-def get_knn_1(train_dataset):
-    '''
-    Given a training dataset 'train_dataset` which is a map of 
-    'tweet_id' => tuple([event, tweet, offensive, emotion]) values,
-    check if a kNN model has already been trained on the
-    'event' and 'offensive' features.
-    If yes, return the trained model
-    If not, train and save the model as a pickle in 'knn_1.pickle'.
-   
-    Return a tuple with 3 values:
-    1.) the trained model
-    2.) a lookup table for event_string => numeric_code
-    3.) a lookup table for offensive_string => numeric_code
-    '''
-
-    model = None
-
-    if ( os.path.exists("knn_1.pickle") ):
-
-        with open("knn_1.pickle", "rb") as pickle_f:
-
-            model = pickle.load(pickle_f)
-
-    else:
-
-        model = train_knn_1(train_dataset)
-
-        with open("knn_1.pickle", "wb") as pickle_f:
-            pickle.dump(model, pickle_f)
-
-    return model
-
 
 def train_svm_1(train_dataset):
     '''
     Given a training dataset 'train_dataset` which is a map of 
     'tweet_id' => tuple([event, tweet, offensive, emotion]) values,
     train an SVM Model on the 'event', 'offensive', length and
-    exclamation mark features.
+    features.
     Return a tuple with 3 values:
     1.) the trained model
     2.) a lookup table for event_string => numeric_code
@@ -217,6 +104,7 @@ def train_svm_1(train_dataset):
 
 
     model = SVC(kernel='rbf', gamma=0.5, probability=True )
+    #model = SVC(kernel='linear', probability=True )
     model.fit(X_feats, y_pred)
 
     return tuple([model,event_to_code, offensive_to_code])
@@ -259,7 +147,7 @@ def test_other_feats_model(test_dataset, model):
     Given a testing dataset 'test_dataset` which is a map of 
     'tweet_id' => tuple([event, tweet, offensive, emotion]) values,
     and a model+params 'model` which is trained on the
-    'event', 'offensive', tweet length and exclamation mark
+    'event', 'offensive', tweet length 
     features.
     Return the accuracy of the model.
     '''
@@ -295,14 +183,7 @@ def test_other_feats_model(test_dataset, model):
         elif ( tweet_len > 180 ):
             len_code = 2
 
-        #has exclamation mark
-        num_exclamations = 0
-        for char in test_dataset[tweet_id][1]:
-            if (char == "!"):
-                num_exclamations += 1
-                #break
-
-        X_feats.append([event_code, offensive_code, len_code, num_exclamations])
+        X_feats.append([event_code, offensive_code, len_code])
         y_pred.append(test_dataset[tweet_id][3].lower())
         
     return model.score(X_feats, y_pred)
@@ -316,7 +197,7 @@ def get_tweet_feats(train_dataset):
     unique_words = set()
     train_data = {}
 
-    word_freqs = {}
+    all_word_freqs = {}
 
     for tweet_id in train_dataset:
 
@@ -326,26 +207,30 @@ def get_tweet_feats(train_dataset):
         words = nltk.tokenize.word_tokenize(tweet)
         cleaned_words = [word for word in words if word not in conf.stop_words]
 
-        train_data[tweet_id] = tuple([cleaned_words, emotion])
+        num_cleaned_words = len(cleaned_words) 
 
-        num_cleaned_words = len(cleaned_words)
+        ngrams = []
 
         for word_i in range(0, num_cleaned_words):
 
             word = cleaned_words[word_i]
             unique_words.add(word)
 
-            if ( word not in word_freqs ):
-                word_freqs[word] = 0
+            if ( word not in all_word_freqs ):
+                all_word_freqs[word] = 0
 
-            word_freqs[word] += 1
+            all_word_freqs[word] += 1
 
-    #remove rare words/phrases (< 5% occurence)
-    #min_threshold = len(train_dataset) * 0.005
-    min_threshold = 0
-    for word in word_freqs:
 
-        if ( word_freqs[word] <= min_threshold ):
+        ngrams.extend(cleaned_words)
+        train_data[tweet_id] = tuple([ngrams, emotion])
+
+    #remove rare words/phrases (< 1% occurence)
+    min_threshold = len(train_dataset) * 0.005
+    #min_threshold = 0
+    for word in all_word_freqs:
+
+        if ( all_word_freqs[word] <= min_threshold ):
 
             unique_words.remove(word)
 
@@ -360,6 +245,7 @@ def get_tweet_feats(train_dataset):
 
             value = 0
             if ( word in train_data[tweet_id][0] ):
+
                 value = 1
 
             feats.append(value)
@@ -368,53 +254,6 @@ def get_tweet_feats(train_dataset):
         y_pred.append(train_data[tweet_id][1])
 
     return tuple([X_feats, y_pred, unique_words])
-
-def train_naive_bayes_2(train_dataset):
-    '''
-    Given a training dataset 'train_dataset` which is a map of 
-    'tweet_id' => tuple([event, tweet, offensive, emotion]) values,
-    train a Naive bayes model on the tweet feature.
-    Return a tuple containing the following values:
-    1.) the trained model
-    2.) a set with unique words seen
-    '''
-    
-    X_feats, y_pred, unique_words = get_tweet_feats(train_dataset)
-
-    model = BernoulliNB()
-    model.fit(X_feats, y_pred)
-
-    return tuple([model, unique_words])
-
-def get_naive_baiyes_2(train_dataset):
-    '''
-    Given a training dataset 'train_dataset` which is a map of 
-    'tweet_id' => tuple([event, tweet, offensive, emotion]) values,
-    check if a Naive Bayes model has already been trained on the
-    'tweet' feature
-    If yes, return the trained model+param
-    If not, train and save the model as a pickle in 'naive_bayes_2.pickle'.
-   
-    Return a tuple with 2 values:
-    1.) the trained model
-    2.) a set with the unique words(dictionary) for the model
-    '''
-    model = None
-
-    if ( os.path.exists("naive_bayes_2.pickle") ):
-
-        with open("naive_bayes_2.pickle", "rb") as pickle_f:
-
-            model = pickle.load(pickle_f)
-
-    else:
-
-        model = train_naive_bayes_2(train_dataset)
-
-        with open("naive_bayes_2.pickle", "wb") as pickle_f:
-            pickle.dump(model, pickle_f)
-
-    return model
 
 def test_BoW_model(test_dataset, model):
     '''
@@ -438,8 +277,8 @@ def test_BoW_model(test_dataset, model):
         all_ngrams = []
 
         all_ngrams.extend(cleaned_words)
-        
-        test_data[tweet_id] = tuple([cleaned_words, emotion])
+
+        test_data[tweet_id] = tuple([all_ngrams, emotion])
 
     X_feats = []
     y_pred  = []
@@ -464,7 +303,7 @@ def test_BoW_model(test_dataset, model):
 
 def get_other_feats_2(tweet, event_to_code, offensive_to_code):
     '''
-    Given a tweet, return 4 features: event, offensive, length, exclamation
+    Given a tweet, return 4 features: event, offensive, length, 
     mark use as a list.
     '''
     event = tweet[0].lower()
@@ -491,15 +330,7 @@ def get_other_feats_2(tweet, event_to_code, offensive_to_code):
     elif ( tweet_len > 180 ):
         len_code = 2
 
-    #has exclamation mark
-    num_exclamations = 0
-    for char in tweet[1]:
-
-        if (char == "!"):
-            num_exclamations += 1
-            #break
-
-    return [event_code, offensive_code, len_code, num_exclamations]
+    return [event_code, offensive_code, len_code]
 
 
 def test_ensemble(test_dataset, models, model_weights):
@@ -516,6 +347,7 @@ def test_ensemble(test_dataset, models, model_weights):
     4.) kNN model 2
     5.) SVM model 1
     6.) SVM model 2
+    7.) SVM model 3
     Return the accuracy of the ensemble.
     '''
 
@@ -542,6 +374,9 @@ def test_ensemble(test_dataset, models, model_weights):
     model_4 = None
     model_5 = None
     model_6 = None
+    model_7 = None
+
+    keywords = None
 
     if ( len(models) > 2 and models[2] is not None ):
         model_3, unique_words  = models[2]
@@ -555,6 +390,9 @@ def test_ensemble(test_dataset, models, model_weights):
     if ( len(models) > 5  and models[5] is not None):
         model_6, event_to_code, offensive_to_code = models[5]
 
+    if ( len(models) > 6  and models[6] is not None):
+        model_7, keywords  = models[6]
+
     #X_feats = []
     #y_pred = []
 
@@ -566,7 +404,10 @@ def test_ensemble(test_dataset, models, model_weights):
 
 
         probabilities = defaultdict(lambda: 0)
-        feats_a = get_other_feats_2(test_dataset[tweet_id], event_to_code, offensive_to_code)
+        feats_a = []
+        
+        if ( event_to_code is not None ):
+            feats_a = get_other_feats_2(test_dataset[tweet_id], event_to_code, offensive_to_code)
 
         #predict with the event and offensive features model
         if ( event_offensive_model is not None ):
@@ -594,14 +435,30 @@ def test_ensemble(test_dataset, models, model_weights):
 
         feats = []
 
-        for word in sorted(unique_words):
+        if ( unique_words is not None ):
 
-            value = 0
+            for word in sorted(unique_words):
 
-            if ( word in all_ngrams ):
-                value = 1
+                value = 0
 
-            feats.append(value)
+                if ( word in all_ngrams ):
+                    value = 1
+
+                feats.append(value)
+
+        feats_c = []
+
+        if ( keywords is not None ):
+
+            for word in sorted(keywords):
+
+                value = 0
+
+                if ( word in all_ngrams ):
+                    value = 1
+
+                feats_c.append(value)
+
 
         #predict with the tweet feature model
         if ( tweet_model is not None ):
@@ -651,6 +508,7 @@ def test_ensemble(test_dataset, models, model_weights):
 
                 probabilities[classes_list[emotion_i]] += pred[emotion_i] * model_weights[4]
 
+        #predict with SVM model 2
         if (model_6 is not None ):
 
             pred = model_6.predict_proba(numpy.array(feats_a).reshape(1, -1))[0].tolist()
@@ -661,7 +519,18 @@ def test_ensemble(test_dataset, models, model_weights):
                 #each model has an equal weight
                 probabilities[classes_list[emotion_i]] += pred[emotion_i] * model_weights[3]
 
-        #predict with 
+        #predict with SVM model 3
+        if ( model_7 is not None ):
+
+            #print("SVM ensemle check")
+            pred = list(model_7.predict_proba(numpy.array(feats_c).reshape(1, -1))[0])
+
+            classes_list = list(model_7.classes_)
+
+            for emotion_i in range(0, len(classes_list)):
+
+                probabilities[classes_list[emotion_i]] += pred[emotion_i] * model_weights[4]
+
 
         best_fit = max(probabilities, key=lambda x: probabilities[x])
 
@@ -669,51 +538,6 @@ def test_ensemble(test_dataset, models, model_weights):
             total_correct += 1
 
     return total_correct / len(test_dataset)
-
-def train_knn(train_dataset):
-    '''
-    Given a testing dataset 'test_dataset` which is a map of 
-    'tweet_id' => tuple([event, tweet, offensive, emotion]) values
-    train a K-Nearest Neighbours classifier
-    Return a tuple with:
-    1.) the kNN classifier model
-    2.) the set of unique words
-
-    '''
-
-    X_feats, y_pred, unique_words = get_tweet_feats(train_dataset)
-
-    model = KNeighborsClassifier(n_neighbors=15)
-    model.fit(X_feats, y_pred)
-
-    return tuple([model, unique_words])
-
-
-def get_knn(train_dataset):
-    '''
-    Given a testing dataset 'test_dataset` which is a map of 
-    'tweet_id' => tuple([event, tweet, offensive, emotion]) values
-    check if the KNN model has already been trained.
-    If yes, return the model
-    If not, train the model and pickle it to 'knn.pickle'
-    Return the KNN model
-    '''
-    model = None
-
-    if ( os.path.exists("knn.pickle") ):
-
-        with open("knn.pickle", "rb") as pickle_f:
-
-            model = pickle.load(pickle_f)
-
-    else:
-
-        model = train_knn(train_dataset)
-
-        with open("knn.pickle", "wb") as pickle_f:
-            pickle.dump(model, pickle_f)
-
-    return model
 
 def train_svm(train_dataset):
     '''
@@ -727,6 +551,7 @@ def train_svm(train_dataset):
     X_feats, y_pred, unique_words = get_tweet_feats(train_dataset)
 
     model = SVC(kernel='rbf', probability=True)
+    #model = SVC(kernel='linear', probability=True)
     model.fit(X_feats, y_pred)
 
     return tuple([model, unique_words])
@@ -758,54 +583,145 @@ def get_svm(train_dataset):
 
     return model
 
+def get_keywords_feats(train_dataset):
+    '''
+    Returns 200 keywords from the tweets in `train_dataset'.
+    Keywords are calculated using the TF-IDF score. 
+    '''
+
+    keywords = set()
+
+    term_freq = {}
+    doc_freq = {}
+    tf_idf_score = {}
+
+    train_data = {}
+
+    for tweet_id in train_dataset:
+    
+        tweet = train_dataset[tweet_id][1].lower()
+        emotion = train_dataset[tweet_id][3].lower()
+    
+        words = nltk.tokenize.word_tokenize(tweet)
+        cleaned_words = [word for word in words if word not in conf.stop_words]
+    
+        num_cleaned_words = len(cleaned_words)
+    
+        unique_words = set(cleaned_words)
+    
+        for word in unique_words:
+    
+            if ( word not in doc_freq ):
+                doc_freq[word] = 1
+            else:
+                doc_freq[word] += 1
+    
+        for word in cleaned_words:
+    
+            if (word not in term_freq):
+                term_freq[word] = 0
+    
+            term_freq[word] += 1
+
+        train_data[tweet_id] = tuple([cleaned_words, emotion])
+
+    for word in doc_freq:
+        tf_idf_score[word] = term_freq[word] / doc_freq[word]
+
+    keywords = set(sorted(tf_idf_score, key=lambda x:tf_idf_score[x])[0:500])
+
+    X_feats = []
+    y_pred  = []
+
+    for tweet_id in train_data:
+
+        feats = []
+
+        for word in sorted(keywords):
+
+            value = 0
+
+            if ( word in train_data[tweet_id][0] ):
+
+                value = 1
+
+            feats.append(value)
+
+        X_feats.append(feats)
+        y_pred.append(train_data[tweet_id][1])
+
+    return tuple([X_feats, y_pred, keywords])
+
+ 
+def train_svm_2(train_dataset):
+    '''
+    Given a training dataset 'train_dataset` which is a map of 
+    'tweet_id' => tuple([event, tweet, offensive, emotion]) values,
+    train an SVM Model on the 'event', 'offensive', length and
+    features.
+    Return a tuple with 2 values:
+    1.) the trained model
+    2.) the keywords 
+    '''
+
+    X_feats, y_pred, keywords = get_keywords_feats(train_dataset)
+
+
+    model = SVC(kernel='rbf', probability=True )
+    #model = SVC(kernel='linear', probability=True )
+    model.fit(X_feats, y_pred)
+
+    return tuple([model, keywords])
+
+
+def get_svm_2(train_dataset):
+    '''
+    Given a testing dataset 'test_dataset` which is a map of 
+    'tweet_id' => tuple([event, tweet, offensive, emotion]) values
+    check if the SVM model has already been trained.
+    If yes, return the model
+    If not, train the model and pickle it to 'svm_2.pickle'
+    Return the SVM model and its params
+    '''
+    model = None
+
+    if ( os.path.exists("svm_2.pickle") ):
+
+        with open("svm_2.pickle", "rb") as pickle_f:
+
+            model = pickle.load(pickle_f)
+
+    else:
+
+        model = train_svm_2(train_dataset)
+
+        with open("svm_2.pickle", "wb") as pickle_f:
+            pickle.dump(model, pickle_f)
+
+    return model
+
+
+
 
 dev_set = load_data("dev.tsv")
 train_set = load_data("train.tsv")
 
-#event and offensive feature
-#model_and_params_1 = get_naive_baiyes_1(train_set)
-#print("Event & offensive features nodel accuracy:", test_other_feats_model(dev_set, model_and_params_1))
 
-
-#tweet features
-#model_and_params_2 = get_naive_baiyes_2(train_set)
-#print("Tweet feature model acccuracy:", test_BoW_model(dev_set, model_and_params_2))
-
-#event/offensive & tweet ensemble
-#print("Event/offensive & tweet ensemble accuracy:", test_ensemble(dev_set, [model_and_params_1, model_and_params_2], [0.5, 0.5]))
-
-#knn model
-#knn_model_and_params = get_knn(train_set)
-#print("Num words: ", len(knn_model_and_params[1]))
-#print("KNN model:",  test_BoW_model(dev_set, knn_model_and_params))
-
-#other feats
-#knn_model_and_params_2 = get_knn_1(train_set)
-#print("KNN model 2:", test_other_feats_model(dev_set, knn_model_and_params_2))
-
-#print("Naive Bayes + kNN 1 ensemble accuracy:", test_ensemble(dev_set, [model_and_params_1, model_and_params_2, knn_model_and_params], [0.3, 0.3, 0.4]))
-
-#print("Naive Bayes + kNN 1 + kNN2 ensemble accuracy:", test_ensemble(dev_set, [model_and_params_1, model_and_params_2, knn_model_and_params, knn_model_and_params_2], [0.3, 0.3, 0.4, 0.4]))
-#SVM model
 svm_model_and_params = get_svm(train_set)
-print("SVM model:", test_BoW_model(dev_set, svm_model_and_params))
-
-#print("Naive Bayes + kNN 1 + kNN2 + SVM 1 ensemble accuracy:", test_ensemble(dev_set, [model_and_params_1, model_and_params_2, knn_model_and_params, knn_model_and_params_2, svm_model_and_params], [0.3, 0.3, 0.4, 0.4, 0.5]))
+print("SVM model 1:", test_BoW_model(dev_set, svm_model_and_params))
 
 #svm model 2
 svm_model_and_params_2 = get_svm_1(train_set)
 print("SVM model 2:", test_other_feats_model(dev_set, svm_model_and_params_2))
 
-#print("Naive Bayes + kNN 1 + kNN2 + SVM 1 + SVM 2 ensemble accuracy:", test_ensemble(dev_set, [model_and_params_1, model_and_params_2, knn_model_and_params, knn_model_and_params_2, svm_model_and_params, svm_model_and_params_2 ], [1, 1, 1, 1, 1, 1]))
-
-#print("kNN 1 + kNN2 + SVM 1 + SVM 2 ensemble accuracy:", test_ensemble(dev_set, [None, None, knn_model_and_params, knn_model_and_params_2, svm_model_and_params, svm_model_and_params_2 ], [0.3, 0.3, 0.4, 0.4, 0.5, 0.5]))
-
 print("SVM 1 + SVM 2 ensemble accuracy:", test_ensemble(dev_set, [None, None, None, None, svm_model_and_params, svm_model_and_params_2 ], [0.3, 0.3, 0.4, 0.4, 0.5, 0.5]))
 
+#svm model 3
+#svm_model_and_params_3 = get_svm_2(train_set)
+#print("SVM model 3:", test_BoW_model(dev_set, svm_model_and_params_3))
 
-#print("Naive Bayes + SVM 1 + SVM 2 ensemble accuracy:", test_ensemble(dev_set, [model_and_params_1, model_and_params_2, None, None, svm_model_and_params, svm_model_and_params_2 ], [0.3, 0.3, 0.4, 0.4, 0.5, 0.5]))
+#print("SVM 1 + SVM 2 + SVM 3 ensemble accuracy:", test_ensemble(dev_set, [None, None, None, None, svm_model_and_params, svm_model_and_params_2, svm_model_and_params_3 ], [0.3, 0.3, 0.4, 0.4, 0.7, 0.5, 0.5]))
 
-#print("Naive Bayes 1 + SVM 2 ensemble accuracy:", test_ensemble(dev_set, [model_and_params_1, None, None, None,svm_model_and_params, svm_model_and_params_2 ], [0.3, 0.3, 0.4, 0.4, 0.5, 0.5]))
+#print("SVM 1 + SVM 3:", test_ensemble(dev_set, [None, None, None, None, svm_model_and_params, None, svm_model_and_params_3 ], [0.3, 0.3, 0.4, 0.4, 0.5, 0.25, 0.75]))
 
-
-
+#print("SVM 2 + SVM 3:", test_ensemble(dev_set, [None, None, None, None, None, svm_model_and_params_2, svm_model_and_params_3 ], [0.3, 0.3, 0.4, 0.4, 0.5, 0.5, 0.4]))
