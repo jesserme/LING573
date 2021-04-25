@@ -11,6 +11,8 @@ import nltk.tokenize
 import pickle
 import os.path
 import numpy
+import sys
+import os.path
 
 import conf
 
@@ -701,10 +703,14 @@ def get_svm_2(train_dataset):
     return model
 
 
+assert len(sys.argv) >= 3, "Usage: {0} <dev-set.tsv> <train-set.tsv>".format(sys.argv[0])
+
+assert os.path.exists(sys.argv[1]), "Specified dev TSV file does not exist: {0}".format(sys.argv[1])
+assert os.path.exists(sys.argv[2]), "Specified train TSV file does not exist: {0}".format(sys.argv[2])
 
 
-dev_set = load_data("dev.tsv")
-train_set = load_data("train.tsv")
+dev_set = load_data(sys.argv[1])
+train_set = load_data(sys.argv[2])
 
 
 svm_model_and_params = get_svm(train_set)
