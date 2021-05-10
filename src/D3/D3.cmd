@@ -1,10 +1,10 @@
 universe = vanilla
-executable = /bin/bash
+executable = run.sh
 getenv = true
-output = output
+output = D3_scores.out
 error = stderr
 log = log
-arguments = "run.sh"
+arguments = "dev.tsv train.tsv"
 transfer_executable = false
 request_memory = 2*1024
 queue
