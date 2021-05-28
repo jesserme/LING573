@@ -1,0 +1,2 @@
+emotion_detection_d4.py:670: RuntimeWarning: invalid value encountered in true_divide
+  cos_sim = numpy.dot(X_feats[sample_i], X_feats[sample_i_2]) / ( numpy.linalg.norm(X_feats[sample_i]) * numpy.linalg.norm(X_feats[sample_i_2]) )
