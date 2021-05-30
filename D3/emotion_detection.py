@@ -48,6 +48,36 @@ def load_data(input_filename):
 
     return tweets
 
+def load_test_data(input_filename):
+    '''
+    Read the TSV file `input_filename' and return a map of
+    the form:
+    'tweet_id': tuple([event, tweet, offensive])
+    '''
+
+    tweets = {}
+
+    with open(input_filename, "r", encoding="utf-8") as input_file:
+
+        seen_header = False
+
+
+        for line in input_file:
+
+            #skip header
+            if (not seen_header ):
+                seen_header = True
+                continue
+
+            line = line.strip()
+
+            tweet_id, event, tweet, offensive = line.split("\t")
+
+            tweets[tweet_id] = tuple([event, tweet, offensive])
+
+    return tweets
+
+
 """
 def load_data(input_filename):
     '''
@@ -164,7 +194,7 @@ def train_svm_1(train_dataset):
 
     return tuple([model,event_to_code, offensive_to_code])
 
-def get_svm_1(train_dataset):
+def get_svm_1(train_dataset, force_retrain=False):
     '''
     Given a training dataset 'train_dataset` which is a map of 
     'tweet_id' => tuple([event, tweet, offensive, emotion]) values,
@@ -181,7 +211,7 @@ def get_svm_1(train_dataset):
 
     model = None
 
-    if ( os.path.exists("svm_1.pickle") ):
+    if (not force_retrain and os.path.exists("svm_1.pickle") ):
 
         with open("svm_1.pickle", "rb") as pickle_f:
 
@@ -375,7 +405,6 @@ def get_other_feats_2(tweet, event_to_code, offensive_to_code):
     '''
     event = tweet[0].lower()
     offensive = tweet[2].lower()
-    emotion = tweet[3].lower()
 
     event_code = -1
 
@@ -399,6 +428,68 @@ def get_other_feats_2(tweet, event_to_code, offensive_to_code):
 
     return [event_code, offensive_code, len_code]
 
+def ensemble_classify(test_dataset, model_1, model_2, model_1_weight, model_2_weight):
+    '''
+    Given a testing dataset 'test_dataset` which is a map of 
+    'tweet_id' => tuple([event, tweet, offensive]) values,
+    2 SVM models (`model_1' and `model_2'),
+    and the weights for the 2 models (`model_1_weight' and `model_2_weight'),
+    return a map of the form:
+    tweet_id => emtion
+    '''
+    svm_model_1, unique_words  = model_1
+    svm_model_2, event_to_code, offensive_to_code = model_2
+
+    emotions = {}
+
+    for tweet_id in test_dataset:
+
+        emotion = "N/A"
+
+        probabilities = defaultdict(lambda: 0)
+       
+        feats_a = get_other_feats_2(test_dataset[tweet_id], event_to_code, offensive_to_code)
+
+        tweet = test_dataset[tweet_id][1].lower()
+
+        words = nltk.tokenize.word_tokenize(tweet)
+        cleaned_words = [word for word in words if word not in conf.stop_words]
+
+        feats = []
+
+        for word in sorted(unique_words):
+
+            value = 0
+
+            if ( word in cleaned_words ):
+                value = 1
+
+            feats.append(value)
+
+        #predict with SVM model 1
+        pred = list(svm_model_1.predict_proba(numpy.array(feats).reshape(1, -1))[0])
+
+        classes_list = list(svm_model_1.classes_)
+
+        for emotion_i in range(0, len(classes_list)):
+
+            probabilities[classes_list[emotion_i]] += pred[emotion_i] * model_1_weight
+
+
+        #predict with SVM model 2
+        pred = svm_model_2.predict_proba(numpy.array(feats_a).reshape(1, -1))[0].tolist()
+
+        classes_list = svm_model_2.classes_.tolist()
+
+        for emotion_i in range(0, len(classes_list)):
+            #each model has an equal weight
+            probabilities[classes_list[emotion_i]] += pred[emotion_i] * model_2_weight
+
+        best_fit = max(probabilities, key=lambda x: probabilities[x])
+
+        emotions[tweet_id] = best_fit
+
+    return emotions
 
 def test_ensemble(test_dataset, models, model_weights):
     '''
@@ -732,7 +823,7 @@ def train_svm(train_dataset):
     return tuple([model, unique_words])
 
 
-def get_svm(train_dataset):
+def get_svm(train_dataset, force_retrain=False):
     '''
     Given a testing dataset 'test_dataset` which is a map of 
     'tweet_id' => tuple([event, tweet, offensive, emotion]) values
@@ -743,7 +834,7 @@ def get_svm(train_dataset):
     '''
     model = None
 
-    if ( os.path.exists("svm.pickle") ):
+    if ( not force_retrain and os.path.exists("svm.pickle") ):
 
         with open("svm.pickle", "rb") as pickle_f:
 
@@ -849,7 +940,7 @@ def train_svm_2(train_dataset):
     return tuple([model, keywords])
 
 
-def get_svm_2(train_dataset):
+def get_svm_2(train_dataset, force_retrain=False):
     '''
     Given a testing dataset 'test_dataset` which is a map of 
     'tweet_id' => tuple([event, tweet, offensive, emotion]) values
@@ -860,7 +951,7 @@ def get_svm_2(train_dataset):
     '''
     model = None
 
-    if ( os.path.exists("svm_2.pickle") ):
+    if ( not force_retrain and os.path.exists("svm_2.pickle") ):
 
         with open("svm_2.pickle", "rb") as pickle_f:
 
@@ -876,25 +967,58 @@ def get_svm_2(train_dataset):
     return model
 
 
-assert len(sys.argv) >= 3, "Usage: {0} <dev-set.tsv> <train-set.tsv>".format(sys.argv[0])
+assert len(sys.argv) >= 4, "Usage: {0} <dev-set.tsv> <train-set.tsv> <test-set.tsv>".format(sys.argv[0])
 
 assert os.path.exists(sys.argv[1]), "Specified dev TSV file does not exist: {0}".format(sys.argv[1])
 assert os.path.exists(sys.argv[2]), "Specified train TSV file does not exist: {0}".format(sys.argv[2])
+assert os.path.exists(sys.argv[3]), "Specified train TSV file does not exist: {0}".format(sys.argv[3])
 
 
 dev_set = load_data(sys.argv[1])
 train_set = load_data(sys.argv[2])
 
+train_set.update(dev_set)
+
+test_set = load_test_data(sys.argv[3])
+
 #X_feats, y_pred, unique_words = get_tweet_feats(train_set)
 
 svm_model_and_params = get_svm(train_set)
-print("SVM model 1:\n", test_BoW_model(dev_set, svm_model_and_params))
+#print("SVM model 1 (dev set):\n", test_BoW_model(dev_set, svm_model_and_params))
 
 #svm model 2
 svm_model_and_params_2 = get_svm_1(train_set)
-print("SVM model 2:\n", test_other_feats_model(dev_set, svm_model_and_params_2))
+#print("SVM model 2 (dev set):\n", test_other_feats_model(dev_set, svm_model_and_params_2))
 
-print("SVM 1 + SVM 2 ensemble accuracy:", test_ensemble(dev_set, [None, None, None, None, svm_model_and_params, svm_model_and_params_2 ], [0.3, 0.3, 0.4, 0.4, 0.5, 0.5]))
+pred_emotions = ensemble_classify(test_set, svm_model_and_params, svm_model_and_params_2, 0.5, 0.5)
+
+#write predictions
+
+with open("test_with_emotions.tsv", "w") as out_f:
+
+    for tweet_id in sorted(test_set, reverse=True):
+
+        event, tweet, offensive = test_set[tweet_id]
+
+        line = "\t".join([tweet_id, event, tweet, offensive, pred_emotions[tweet_id]])
+
+        out_f.write(line + "\n")
+
+
+#print("-*" * 30)
+
+#eval with test data
+
+#add the dev set to the training data
+
+
+#svm_model_and_paramsb = get_svm(train_set, force_ratrain=True)
+#print("SVM model 1 (test set):\n", test_BoW_model(test_set, svm_model_and_paramsb))
+
+#svm_model_and_params_2b = get_svm_1(train_set, force_ratrain=True)
+#print("SVM model 2 (test set):\n", test_other_feats_model(test_set, svm_model_and_params_2b))
+
+#print("SVM 1 + SVM 2 ensemble accuracy:", test_ensemble(test_set, [None, None, None, None, svm_model_and_params, svm_model_and_params_2 ], [0.3, 0.3, 0.4, 0.4, 0.5, 0.5]))
 
 #svm model 3
 #svm_model_and_params_3 = get_svm_2(train_set)
