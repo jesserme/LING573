@@ -6,3 +6,5 @@ stop_words = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "_", "#", "a", "
 
 
 sample_min = {'others': 1000, 'sadness': 1000, 'joy': 1000, 'anger': 1000, 'surprise': 1000, 'disgust': 1000, 'fear': 1000}
+
+sample_max = {'others': 800, 'sadness': 800, 'joy': 800, 'anger': 800, 'surprise': 800, 'disgust': 800, 'fear': 800}
