@@ -1,0 +1,26 @@
+Length before:  5723
+defaultdict(<function under_sample.<locals>.<lambda> at 0x7fa816e4f790>, {'joy': 1227, 'disgust': 111, 'others': 2800, 'sadness': 693, 'surprise': 238, 'anger': 589, 'fear': 65})
+Length after:  3296
+anger disgust fear joy others sadness surprise
+Confusion matrix(BoW Model)
+[[ 47   7   1  23  81  15   4]
+ [  2   1   0   2   5   3   2]
+ [  0   0   3   2   2   0   0]
+ [ 19   6   4 133 189  29  20]
+ [  3   0   0   2  70   5   1]
+ [  9   2   0   6  15  50   1]
+ [  5   0   1  13  52   2   7]]
+SVM model 1:
+ 0.3684834123222749
+anger disgust fear joy others sadness surprise
+Confusion matrix(Other Feats Model)
+[[ 41  11   2   7  10   0   5]
+ [  0   0   0   0   0   0   0]
+ [  0   0   0   0   0   0   0]
+ [  0   0   0   0   0   0   0]
+ [ 32   4   7 167 386  31  26]
+ [ 12   1   0   7  18  73   4]
+ [  0   0   0   0   0   0   0]]
+SVM model 2:
+ 0.5924170616113744
+SVM 1 + SVM 2 ensemble accuracy: 0.5995260663507109
