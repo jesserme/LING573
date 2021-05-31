@@ -1,0 +1,2 @@
+#!/bin/sh
+/home2/jesserme/spanish_emotions/py_3.9/bin/python3 emotion_detection_adaptation.py /home2/jesserme/src/D4/adaptation/dev.tsv /home2/jesserme/src/D4/adaptation/train.tsv /home2/jesserme/src/D4/adaptation/eval.tsv

@@ -1,0 +1,47 @@
+anger disgust enjoyment fear other sadness surprise
+Confusion matrix(BoW Model)
+[[ 13   5   1   4   1   2   0]
+ [ 13  58  16   3  20   8   2]
+ [  9  27 120   7  38  18  11]
+ [  0   1   2   9   2   0   0]
+ [  5  21  25   2  44  13   3]
+ [  1   7  18   2  10  31   1]
+ [  1   2   8   1   5   3  12]]
+SVM model 1 (eval set):
+ 0.4743801652892562
+anger disgust enjoyment fear other sadness surprise
+Confusion matrix(BoW Model)
+[[  2   1   0   0   1   0   0]
+ [ 20  46  20   7  19   5   6]
+ [ 12  40 129  16  52  29  16]
+ [  0   1   0   1   1   0   0]
+ [  6  25  32   3  38  10   6]
+ [  1   7   8   1   7  30   0]
+ [  1   1   1   0   2   1   1]]
+SVM model 2 (eval set):
+ 0.40826446280991735
+*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+anger disgust enjoyment fear other sadness surprise
+Confusion matrix(BoW Model)
+[[ 10   4   4   1   0   5   0]
+ [ 13  53  15   3  15  15   2]
+ [  5  27 107   8  35  20   7]
+ [  0   4   2  18   1   0   0]
+ [  5  15  25   4  53  15   9]
+ [  4   8  12   3   7  47   3]
+ [  1   1   5   0   6   1  10]]
+SVM model 1 (dev set):
+ 0.4901315789473684
+anger disgust enjoyment fear other sadness surprise
+Confusion matrix(BoW Model)
+[[  2   1   0   0   0   0   0]
+ [ 11  47  19   5  18  12   4]
+ [ 17  38 102  17  52  27  17]
+ [  0   1   2   1   1   1   0]
+ [  6  23  37   7  42  31   5]
+ [  2   2   9   7   3  32   2]
+ [  0   0   1   0   1   0   3]]
+SVM model 2 (dev set):
+ 0.37664473684210525
+*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+SVM 1 + SVM 2 ensemble accuracy: 0.49506578947368424
